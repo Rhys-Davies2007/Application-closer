@@ -1,11 +1,12 @@
 #Rhys Davies
 #Application Timer
-#11 Tech assignemtn Nov 2022
+#11 Tech assignment Nov 2022
 
 import os  #OS is required to access files properly and to stop programs
 import configparser  #Configparser used for all of the INI read and write
 import time
-import winsound
+import winsound  #simple audio library
+import ctypes  #Module for custom windows messages to show up
 try:
     from playsound import playsound as ps
 except:
@@ -19,7 +20,8 @@ user = ""
 timer = 30
 warning = 5
 untilWarning = 25
-appPath = ""
+appOpen = ""
+appClose = ""
 appName = ""
 presetDir = "presets"
 found = False
@@ -30,6 +32,9 @@ startTime = ""
 config = configparser.ConfigParser()
 #os.system('TASKKILL /F /IM notepad.exe')
 #os.startfile('presets\cubefield.ini')
+
+def Mbox(title, text, style):
+    return ctypes.windll.user32.MessageBoxW(0, text, title, style)
 
 createPreset = ""
 preset = input("Do you have a previous preset? (y/n): ")
@@ -52,7 +57,8 @@ while preset.lower().strip() == "y":
                 timer = float(config['Timing'].get('timer'))
                 warning = float(config['Timing'].get('warning'))
                 #App
-                appPath = config['Application'].get('Path')
+                appOpen = config['Application'].get('appopen')
+                appClose = config['Application'].get('appclose')
                 appName = config['Application'].get('name')
                 
                 print(f"{presetName} found.  Welcome back {user}")
@@ -66,7 +72,7 @@ while preset.lower().strip() == "y":
         again = input("Would you like to try again? (y/n:) ")
         while again.lower().strip() != "y" and again.lower().strip() != "n":
             print("Not an option, please try again.")
-            again = input('Would you like to save these settings as a preset to use later? (y/n): ')
+            again = input("Would you like to try again? (y/n:) ")
         if again == "y":
             continue
         if again == "n":
@@ -77,7 +83,12 @@ while preset.lower().strip() == "y":
 while preset.lower().strip() == "n":
     user = input('What is your name: ')
     appName = input(f"hi {user}, what app are you trying to close down: ")
-    appPath = input(f"What is the full path (including exe) of {appName}: ")
+    appOpen = input(f"What is the full path (including exe) of {appName}: ")
+    ext = os.path.splitext(appOpen)[-1].lower()
+    if ext == '.exe':
+        appClose = appOpen
+    else:
+        appClose = input('Since this file is not an exe, what is the full path (including exe) of the application it opens with: ')
     while True:
         try:
             timer = float(input("How long do you want the timer to go for in minutes: "))
@@ -102,7 +113,7 @@ while preset.lower().strip() == "n":
         presetName = input("What would you like to call the preset: ")
         config['General'] = {'user':user,'presetName':presetName}
         config['Timing'] = {'timer':timer,'warning':warning}
-        config['Application'] = {'path':appPath,'name':appName}
+        config['Application'] = {'appOpen':appOpen,'appClose':appClose,'name':appName}
         with open(f'presets\{presetName}.ini', 'w') as configfile:
             config.write(configfile)
         break
@@ -138,22 +149,21 @@ if start.lower().strip() == "n":
 
 
     if startTime.lower().strip() == "y":
-        os.startfile(f'{appPath}')
+        os.startfile(f'{appOpen}')
         
 untilWarning = timer - warning
 
 time.sleep(untilWarning*60)
 print(f'{warning} minutes left')
-with open('warning.txt','w') as f:
-    f.write(f'Warning, {warning} minutes remaining')
-os.startfile(f'warning.txt')
+Mbox('WARNING', f'{warning} minutes remaining', 0)
 winsound.PlaySound('alarm.wav', winsound.SND_ASYNC | winsound.SND_ALIAS)
 time.sleep(warning*60)
-appPath = os.path.split(appPath)
+appClose = os.path.split(appClose)
 try:
-    os.system(f'TASKKILL /F /IM {appPath[1]}')
+    os.system(f'TASKKILL /F /IM {appClose[1]}')
 except(Exception):
     print(str(Exception))
 winsound.PlaySound('alarm.wav', winsound.SND_ASYNC | winsound.SND_ALIAS)
+Mbox('Time Is Up', f'Time is Up!', 0)
 print('Time is up!')
 end = input("ENTER to quit")
